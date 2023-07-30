@@ -9,9 +9,11 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@stitches/react": "^1.2.8",
     "@types/node": "20.4.5",
     "@types/react": "18.2.17",
     "@types/react-dom": "18.2.7",
+    "keen-slider": "^6.8.6",
     "next": "13.4.12",
     "react": "18.2.0",
     "react-dom": "18.2.0",
