@@ -1,11 +1,19 @@
 import { GetStaticPaths, GetStaticProps } from "next";
+
+import Stripe from "stripe";
 import axios from "axios";
 import Image from "next/image";
 import { useState } from "react";
-import Stripe from "stripe";
 import { stripe } from "../../lib/stripe";
 import { ImageContainer, ProductContainer, ProductDetails } from "../../styles/pages/product";
+import { useShoppingCart } from 'use-shopping-cart';
 
+
+import { loadStripe } from '@stripe/stripe-js';
+
+// ...
+
+const stripePromise = loadStripe('your-publishable-key');
 interface ProductProps {
   product: {
     id: string
@@ -18,7 +26,7 @@ interface ProductProps {
 }
 
 export default function Product({ product }: ProductProps) {
-
+  const { addItem, cartDetails } = useShoppingCart();
   const [isCreatingCheckoutSession, setIsCreatingCheckoutSession] = useState(false);
 
   async function handleBuyButton() {
@@ -39,6 +47,49 @@ export default function Product({ product }: ProductProps) {
     }
   }
 
+  async function handleCheckoutButton() {
+    const stripe = await stripePromise;
+    
+    if (cartDetails) {
+      const line_items = Object.values(cartDetails).map(item => ({
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: item.name,
+            images: [item.image],
+          },
+          unit_amount: item.price,
+        },
+        quantity: item.quantity,
+      }));
+  
+      axios.post('/api/checkout', { line_items })
+        .then(response => {
+          const { sessionId } = response.data;
+  
+          if (stripe) {
+            // redirecionar para o checkout do Stripe
+            stripe.redirectToCheckout({ sessionId });
+          } else {
+            // Tratar erro de chave de API inválida ou falta de chave de API
+            console.error('Stripe key is invalid!');
+          }
+        })
+        .catch(error => {
+          // tratar erros
+        });
+    }
+  }
+  function handleAddToCart() {
+    addItem({
+      sku: product.id,
+      name: product.name,
+      image: product.imageUrl,
+      price: parseInt(product.price),
+      currency: "BRL"
+    });
+  }
+
   return (
     <ProductContainer>
       <ImageContainer>
@@ -53,6 +104,9 @@ export default function Product({ product }: ProductProps) {
 
         <button disabled={isCreatingCheckoutSession} onClick={handleBuyButton}>
           Comprar agora
+        </button>
+        <button onClick={handleAddToCart}>
+          Adicionar ao carrinho
         </button>
       </ProductDetails>
     </ProductContainer>
